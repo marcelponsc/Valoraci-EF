@@ -47,7 +47,7 @@
         <i class="fa-solid fa-clipboard-check w-6"></i> Avaluació
       </button>
       <button onclick="switchTab('tests')" id="nav-tests" class="nav-btn w-full flex items-center px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition">
-        <i class="fa-solid fa-stopwatch w-6"></i> Banco de Proves
+        <i class="fa-solid fa-stopwatch w-6"></i> Banc de Proves
       </button>
       <button onclick="switchTab('workouts')" id="nav-workouts" class="nav-btn w-full flex items-center px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition">
         <i class="fa-solid fa-dumbbell w-6"></i> Entrenaments
@@ -90,7 +90,7 @@
         </div>
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Taxa de Millora</div>
-          <div class="text-3xl font-extrabold text-brand-600 mt-2" id="kpi-improvement-rate">0%</div>
+          <div class="text-3xl font-extrabold text-brand-600 mt-2" id="kpi-improvement-rate">65%</div>
         </div>
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div class="text-slate-500 text-xs font-semibold uppercase tracking-wider">Capacitat Prioritària</div>
@@ -107,7 +107,7 @@
           </div>
         </div>
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <h3 class="text-base font-bold text-slate-800 mb-4">Distribució d'Alumnat en Progrés Positive</h3>
+          <h3 class="text-base font-bold text-slate-800 mb-4">Distribució d'Alumnat en Progrés Positiu</h3>
           <div class="h-64">
             <canvas id="chart-progress"></canvas>
           </div>
@@ -228,7 +228,7 @@
       </div>
 
       <div id="workout-result-container" class="hidden space-y-6">
-        <!-- Renderitzat del pla生成 -->
+        <!-- Renderitzat del pla generat -->
       </div>
     </section>
 
@@ -323,7 +323,6 @@
 
     // --- INICIALITZACIÓ ---
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('eval-date').valueToDate = new Date();
       document.getElementById('eval-date').value = new Date().toISOString().substring(0, 10);
       renderDashboard();
       populateDropdowns();
@@ -432,6 +431,24 @@
       renderStudents();
     }
 
+    function openTestModal() {
+      const testName = prompt("Nom de la nova prova:");
+      if (!testName) return;
+      const category = prompt("Capacitat física (Resistència, Força, Flexibilitat, Velocitat):") || "General";
+      const unit = prompt("Unitat de mesura (cm, s, Períodes...):") || "punts";
+      
+      const newTest = {
+        id: 't' + Date.now(),
+        category: category,
+        name: testName,
+        unit: unit,
+        higherIsBetter: true
+      };
+      DB.tests.push(newTest);
+      renderTests();
+      populateDropdowns();
+    }
+
     // --- PROVES ---
     function renderTests() {
       const grid = document.getElementById('tests-grid');
@@ -489,12 +506,14 @@
       const student = DB.students.find(s => s.id === studentId);
       const container = document.getElementById('workout-result-container');
       
+      if(!student) return;
+
       container.classList.remove('hidden');
       container.innerHTML = `
         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
           <div class="border-b border-slate-100 pb-4">
             <h3 class="text-xl font-bold text-slate-900">Pla d'Entrenament Individualitzat: ${student.name}</h3>
-            <p class="text-slate-500 text-sm">Focus Principal d'Atenció: <span class="font-semibold text-brand-600">Resistència Cardiovaskular</span> | Nivell: Intermedi</p>
+            <p class="text-slate-500 text-sm">Focus Principal d'Atenció: <span class="font-semibold text-brand-600">Resistència Cardiovascular</span> | Nivell: Intermedi</p>
           </div>
 
           <!-- Pauta de 5 setmanes -->
@@ -540,7 +559,7 @@
                 <strong class="text-slate-800">2. Part Principal (15 min):</strong>
                 <ul class="list-disc list-inside text-slate-600 pl-2">
                   <li>Joc de relleus aeròbics amb canvis de ritme.</li>
-                  <li>Circuït d'autocàrregues: Flexions adaptades, salts a la corda i plàncol isomètric.</li>
+                  <li>Circuit d'autocàrregues: Flexions adaptades, salts a la corda i plàncol isomètric.</li>
                 </ul>
               </div>
               <div class="p-3 bg-slate-50 rounded-lg">
@@ -601,7 +620,7 @@
                 const test = DB.tests.find(t => t.id === e.testId);
                 return `
                   <div class="flex justify-between items-center text-sm border-b border-slate-200 pb-2">
-                    <span class="font-medium text-slate-700">${test ? test.name : 'Prova'}:</span>
+                    <span class="font-medium text-slate-700">${test ? test.name : 'Prova'} (${e.date}):</span>
                     <span class="font-bold text-slate-900">${e.value}${test ? test.unit : ''}</span>
                   </div>
                 `;
@@ -621,46 +640,57 @@
       } else {
         // Informe Docent (Tècnic)
         paper.innerHTML = `
-          <div class="border-b border-slate-200 pb-4">
-            <h2 class="text-xl font-bold text-slate-900">Informe d'Avaluació Pedagògica i Condició Física</h2>
-            <div class="grid grid-cols-2 text-xs text-slate-600 mt-2">
-              <div><strong>Alumne/a:</strong> ${student.name}</div>
-              <div><strong>Grup:</strong> ${student.group}</div>
-              <div><strong>Data Naixement:</strong> ${student.dob}</div>
-              <div><strong>Data Informe:</strong> ${new Date().toLocaleDateString('ca-ES')}</div>
+          <div class="border-b border-slate-200 pb-4 flex justify-between items-start">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Informe d'Avaluació Pedagògica i Condició Física</h2>
+              <p class="text-sm text-slate-600">Alumne/a: <strong>${student.name}</strong> | Curs: <strong>${student.group}</strong> | Data Naixement: ${student.dob}</p>
+            </div>
+            <span class="bg-slate-100 text-slate-800 text-xs font-semibold px-2.5 py-1 rounded">Exp. #${student.id}</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Registres Avaluatius</h4>
+              <p class="text-2xl font-bold text-slate-900">${evalData.length} valoracions</p>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Observacions Docents</h4>
+              <p class="text-sm text-slate-700">${student.notes || 'Sense observacions destacades.'}</p>
             </div>
           </div>
 
-          <div class="space-y-4">
-            <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wider">Històric de Valoracions</h3>
-            <table class="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr class="bg-slate-100 text-slate-700">
-                  <th class="p-2 border">Data</th>
-                  <th class="p-2 border">Prova</th>
-                  <th class="p-2 border">Capacitat</th>
-                  <th class="p-2 border">Resultat</th>
+          <div>
+            <h3 class="font-bold text-slate-800 text-sm mb-3 uppercase tracking-wider">Històric de Resultats Tècnics</h3>
+            <table class="w-full text-left text-sm border border-slate-200 rounded-lg overflow-hidden">
+              <thead class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+                <tr>
+                  <th class="p-3">Data</th>
+                  <th class="p-3">Capacitat</th>
+                  <th class="p-3">Prova</th>
+                  <th class="p-3">Resultat</th>
+                  <th class="p-3">Anotacions Tècniques</th>
                 </tr>
               </thead>
-              <tbody>
-                ${evalData.map(e => {
+              <tbody class="divide-y divide-slate-200">
+                ${evalData.length > 0 ? evalData.map(e => {
                   const test = DB.tests.find(t => t.id === e.testId);
                   return `
                     <tr>
-                      <td class="p-2 border">${e.date}</td>
-                      <td class="p-2 border font-medium">${test ? test.name : '-'}</td>
-                      <td class="p-2 border">${test ? test.category : '-'}</td>
-                      <td class="p-2 border font-bold">${e.value}${test ? test.unit : ''}</td>
+                      <td class="p-3 text-slate-500">${e.date}</td>
+                      <td class="p-3 font-medium text-slate-700">${test ? test.category : '-'}</td>
+                      <td class="p-3 font-semibold text-slate-900">${test ? test.name : '-'}</td>
+                      <td class="p-3 font-bold text-brand-700">${e.value}${test ? test.unit : ''}</td>
+                      <td class="p-3 text-slate-600 text-xs">${e.notes || '-'}</td>
                     </tr>
                   `;
-                }).join('')}
+                }).join('') : '<tr><td colspan="5" class="p-4 text-center text-slate-400">Cap registre disponible per a aquest alumne/a.</td></tr>'}
               </tbody>
             </table>
           </div>
 
-          <div class="space-y-2 text-xs text-slate-700 border-t border-slate-200 pt-4">
-            <h4 class="font-bold text-slate-900">Conclusions i Proposta de Millora Pedagògica:</h4>
-            <p>L'alumne/a presenta una evolució positiva en el global de les capacitats físiques bàsiques. Es proposa reforçar el bloc de resistència mitjançant progressions d'autocàrrega en l'àrea d'entrenament individualitzat.</p>
+          <div class="pt-4 border-t border-slate-200 text-xs text-slate-400 flex justify-between">
+            <span>Generat per FitEval Pro</span>
+            <span>Document d'Ús Intern Docent</span>
           </div>
         `;
       }
